@@ -18,6 +18,7 @@ bit-set.workspace = true
 regex.workspace = true
 thiserror.workspace = true
 tree-sitter = { workspace = true, optional = true }
+memchr = "2.7"
 
 [features]
 default = ["tree-sitter"]

@@ -161,6 +161,7 @@ name = "ast-grep-core"
 version = "0.39.2"
 dependencies = [
  "bit-set",
+ "memchr",
  "regex",
  "thiserror 2.0.12",
  "tree-sitter",

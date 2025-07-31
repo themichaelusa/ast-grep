@@ -162,35 +162,24 @@ impl Content for String {
 
   fn get_char_column(&self, _col: usize, offset: usize) -> usize {
     let src = self.as_bytes();
-
-    let mut line_start = 0;
-    for (i, &byte) in src[..offset].iter().enumerate() {
-      let is_newline = NEWLINE_LUT[byte as usize];
-      line_start = (line_start * (1 - is_newline as usize)) + ((i + 1) * is_newline as usize);
+    if offset == 0 {
+      return 0;
     }
 
-    src[line_start..offset]
-      .iter()
-      .map(|&b| UTF8_CHAR_LUT[b as usize] as usize)
-      .sum()
+    let data = &src[..offset];
+    
+    // Use memchr's highly optimized reverse search for newlines (SIMD-accelerated)
+    let line_start = memchr::memrchr(b'\n', data)
+      .map(|pos| pos + 1)
+      .unwrap_or(0);
+    
+    let line_bytes = &data[line_start..];
+    
+    // Single flat loop - let the compiler decide on vectorization strategy
+    let mut count = 0u32;
+    for &byte in line_bytes {
+      count += ((byte & 0xC0) != 0x80) as u32;
+    }
+    count as usize
   }
 }
-
-/// Lookup table for newline detection: 1 if byte is '\n', 0 otherwise
-const NEWLINE_LUT: [u8; 256] = {
-  let mut table = [0u8; 256];
-  table[b'\n' as usize] = 1;
-  table
-};
-
-// UTF-8 continuation bytes (10xxxxxx)
-/// Lookup table for UTF-8 character counting: 1 if byte starts a character, 0 if continuation
-const UTF8_CHAR_LUT: [u8; 256] = {
-  let mut table = [1u8; 256];
-  let mut i = 0x80;
-  while i <= 0xBF {
-    table[i] = 0;
-    i += 1;
-  }
-  table
-};
